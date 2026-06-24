@@ -1,10 +1,11 @@
+// Load environment variables from .env file
+require('dotenv').config();
+
+// Import the database connection pool
+const pool = require('./db');  
 const express = require('express');
 const app = express();
 app.use(express.json()); // Parse incoming JSON request bodies
-
-// In-memory store for todos
-let todos = [];
-let nextId = 1; // Auto-incrementing ID counter
 
 // Health check
 app.get('/', (req, res) => {
@@ -12,65 +13,85 @@ app.get('/', (req, res) => {
 });
 
 // Get all todos
-app.get('/todos', (req, res) => {
-    res.json(todos);
+app.get('/todos', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM todos');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Create a new todo
-app.post('/todos', (req, res) => {
-    const { title } = req.body;
+app.post('/todos', async (req, res) => {
 
-    const todo = {
-        id: nextId++,
-        title,
-        completed: false,
-        createdAt: new Date()
-    };
-
-    todos.push(todo);
-    res.status(201).json(todo);
+    try {
+        const { title } = req.body;
+        const result = await pool.query(
+            'INSERT INTO todos (title, completed) VALUES ($1, $2) RETURNING *',
+            [title, false]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
+
 // Get a single todo by ID
-app.get('/todos/:id', (req, res) => {
-  const id = Number(req.params.id);
-  const todo = todos.find(t => t.id === id);
+app.get('/todos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query('SELECT * FROM todos WHERE id = $1', [id]);
 
-  if (!todo) {
-    return res.status(404).json({ error: 'Todo not found' });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Todo not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  res.json(todo);
 });
 
 // Update a todo's title and/or completed status
-app.patch('/todos/:id', (req, res) => {
-  const id = Number(req.params.id);
-  const todo = todos.find(t => t.id === id);
+app.patch('/todos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, completed } = req.body;
 
-  if (!todo) {
-    return res.status(404).json({ error: 'Todo not found' });
+    const result = await pool.query(
+      `UPDATE todos SET
+        title = COALESCE($1, title),
+        completed = COALESCE($2, completed)
+       WHERE id = $3 RETURNING *`,
+      [title, completed, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Todo not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  const { title, completed } = req.body;
-
-  if (title !== undefined) todo.title = title;
-  if (completed !== undefined) todo.completed = completed;
-
-  res.json(todo);
 });
 
 // Delete a todo by ID
-app.delete('/todos/:id', (req, res) => {
-  const id = Number(req.params.id);
-  const index = todos.findIndex(t => t.id === id);
+app.delete('/todos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query('DELETE FROM todos WHERE id = $1 RETURNING *', [id]);
 
-  if (index === -1) {
-    return res.status(404).json({ error: 'Todo not found' });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Todo not found' });
+    }
+
+    res.status(204).send();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  todos.splice(index, 1);
-  res.status(204).send();
 });
 
 app.listen(3000, () => {
