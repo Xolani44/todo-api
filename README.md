@@ -22,7 +22,7 @@ to structure a Node.js backend project with a real persistent database.
 
 - Node.js
 - Express
-- PostgreSQL
+- PostgreSQL 15
 - Docker & docker-compose
 
 ## Run Locally
@@ -30,13 +30,70 @@ to structure a Node.js backend project with a real persistent database.
 **Prerequisites:** Docker and Docker Desktop installed
 
 ```bash
-git clone git clone https://github.com/Xolani44/todo-api.git
+git clone https://github.com/Xolani44/todo-api.git
 cd todo-api
-cp .env.example .env  # add your own credentials
+```
+
+**Set up environment variables:**
+
+Copy `.env.example` to `.env` and fill in your credentials:
+
+```bash
+cp .env.example .env
+```
+
+On Windows (if `cp` doesn't work), manually duplicate `.env.example`,
+rename it to `.env`, and update the values. See `.env.example` for 
+all required variables.
+
+**Start the containers:**
+
+```bash
 docker compose up --build
 ```
 
 API runs on `http://127.0.0.1:3000`
+
+To test the endpoints, use a tool like [Postman](https://www.postman.com/downloads)
+or any HTTP client. Visiting `http://127.0.0.1:3000` in a browser will just
+confirm the server is running.
+
+## Example Requests
+
+**Create a todo:**
+```json
+POST /todos
+Content-Type: application/json
+
+{
+  "title": "Learn Docker"
+}
+```
+
+**Expected response (`201 Created`):**
+```json
+{
+  "id": 1,
+  "title": "Learn Docker",
+  "completed": false,
+  "created_at": "2026-06-24T07:42:34.165Z"
+}
+```
+
+**Update a todo:**
+```json
+PATCH /todos/1
+Content-Type: application/json
+
+{
+  "completed": true
+}
+```
+
+**Delete a todo:**
+```json
+DELETE /todos/1
+```
 
 ## Decisions & Trade-offs
 
