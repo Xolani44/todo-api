@@ -30,7 +30,7 @@ to structure a Node.js backend project with a real persistent database.
 **Prerequisites:** Docker and Docker Desktop installed
 
 ```bash
-git clone git@github-personal:Xolani44/todo-api.git
+git clone git clone https://github.com/Xolani44/todo-api.git
 cd todo-api
 cp .env.example .env  # add your own credentials
 docker compose up --build
